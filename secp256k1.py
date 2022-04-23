@@ -1,8 +1,8 @@
 from util import bytesToNum, numToBytes
 from curve import Point, invert, mod
-from sha256 import sha256
+from sha256 import hmac256
 from random import randint
-from typing import List, Dict
+from typing import List
 
 
 P: int = 2 ** 256 - 2 ** 32 - 2 ** 9 - 2 ** 8 - 2 ** 7 - 2 ** 6 - 2 ** 4 - 1
@@ -78,30 +78,28 @@ def getPublicKey(sk: List[int], isCompressed: bool = False) -> List[int]:
 
 
 # Sign message using secret key.
-def sign(msg: List[int], sk: List[int], entropy: List[int]) -> Dict[List[int], List[int]]:
+def sign(msg: List[int], sk: List[int], entropy: List[int]) -> List[int]:
     message: int = bytesToNum(msg)
     secretKey: int = bytesToNum(sk)
 
     r: int = 0
     s: int = 0
     while r == 0 or s == 0:
-        entropy: List[int] = sha256(entropy)
+        entropy: List[int] = hmac256(msg, entropy)
         seed: int = bytesToNum(entropy)
         r = multiply(G, seed).x
         s = ((message + r * secretKey) * invert(seed, N)) % N
 
-    return {
-        'r': numToBytes(r, 32),
-        's': numToBytes(s, 32)
-    }
+    return numToBytes(r, 32) + numToBytes(s, 32)
 
 
 # Verify signature is valid using public key.
-def verify(r: List[int], s: List[int], msg: List[int], pk: List[int]) -> bool:
+def verify(sig: List[int], msg: List[int], pk: List[int]) -> bool:
     message: int = bytesToNum(msg)
     publicKey: int = ArrToPoint(pk)
-    r: int = bytesToNum(r)
-    s: int = bytesToNum(s)
+
+    r: int = bytesToNum(sig[:32])
+    s: int = bytesToNum(sig[32:])
 
     # Probably forged, protect against fault attacks.
     if message == 0: return False
@@ -114,7 +112,7 @@ def verify(r: List[int], s: List[int], msg: List[int], pk: List[int]) -> bool:
     return mod(Q.x, N) == r
     
 
-def main() -> None:
+if __name__ == '__main__':
     """
     [3, 116, 61, 190, 93, 174, 15, 154, 165, 22, 242, 56, 13, 168, 8, 194, 94,
     110, 224, 129, 237, 180, 216, 85, 221, 167, 203, 32, 104, 169, 181, 142, 159]
@@ -133,18 +131,12 @@ def main() -> None:
     print(ArrToPoint(pk))
 
     msg: List[int] = [
-        163,  51,  33, 249, 142,  79, 241, 194,
-        131, 199, 105, 152, 241,  79,  87,  68,
-        117,  69, 211,  57, 179, 219,  83,  76,
-        109, 136, 109, 236, 180,  32, 159,  40
+        163, 51, 33, 249, 142, 79, 241, 194, 131, 199, 105, 152, 241, 79, 87, 68,
+        117, 69, 211, 57, 179, 219, 83, 76, 109, 136, 109, 236, 180, 32, 159, 40
     ]
     entropy: List[int] = numToBytes(randint(0, P))
-    sig: Dict[str, List[int]] = sign(msg, sk, entropy)
+    sig: List[int] = sign(msg, sk, entropy)
     print(sig)
 
-    isValid: bool = verify(sig['r'], sig['s'], msg, pk)
+    isValid: bool = verify(sig, msg, pk)
     print(isValid)
-
-
-if __name__ == '__main__':
-    main()
