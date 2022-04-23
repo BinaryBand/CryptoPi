@@ -58,22 +58,20 @@ def double(Q: Point) -> None:
     Q.y = mod(m * (x1 - Q.x) - y1, P)
 
 
-def multiply(Q: Point, n: int) -> Point:
+def multiply(Q: Point, k: int) -> Point:
     G: Point = Point(Q.x, Q.y)
     S: Point = Point(0, 0)
-    while n:
-        if n & 1: add(S, G)
+    while k:
+        if k & 1: add(S, G)
         double(G)
-        n >>= 1
+        k >>= 1
     return S
 
 
-# Calculate public key from secret key.
+# Multiply Point 'G' by int 'secretKey' to find public key.
 def getPublicKey(sk: List[int], isCompressed: bool = False) -> List[int]:
     secretKey: int = mod(bytesToNum(sk), P)
-    PK: Point = multiply(G, secretKey)      # Multiply Point 'G' by int 'secretKey' to find public key.
-
-    # Convert public key from Point to byte array before returning it.
+    PK: Point = multiply(G, secretKey)
     return PK.toArray(isCompressed)
 
 
@@ -122,13 +120,7 @@ if __name__ == '__main__':
         24, 172, 113, 103, 72, 59, 104, 135, 229, 132, 209, 107, 129, 161, 171
     ]
     pk: List[int] = getPublicKey(sk, True)
-    print(pk, len(pk))
-
-    """
-    x: 52577381964022070644701442866140528745228946117899238084264950131588662136479
-    y: 9665905194987398137563352635586191466703234613099984357204279640613742434171
-    """
-    print(ArrToPoint(pk))
+    print('Public key:', pk)
 
     msg: List[int] = [
         163, 51, 33, 249, 142, 79, 241, 194, 131, 199, 105, 152, 241, 79, 87, 68,
@@ -136,7 +128,7 @@ if __name__ == '__main__':
     ]
     entropy: List[int] = numToBytes(randint(0, P))
     sig: List[int] = sign(msg, sk, entropy)
-    print(sig)
+    print('Signature:', sig)
 
     isValid: bool = verify(sig, msg, pk)
-    print(isValid)
+    print('Valid:', isValid)
