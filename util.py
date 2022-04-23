@@ -2,15 +2,20 @@ from typing import List
 
 
 # Convert number array to large int.
-def bytesToNum(arr: List[int]) -> int:
+def bytesToNum(arr: List[int], endian='be') -> int:
     n: int = 0
-    for a in arr:
-        n = n << 8 | a
+
+    if endian == 'be':
+        for a in arr:
+            n = n << 8 | a
+    else:
+        for i, a in enumerate(arr):
+            n += a << (8 * i)
 
     return n
 
 
-def numToBytes(n: int, byteSize: int = 32) -> List[int]:
+def numToBytes(n: int, byteSize: int = 32, endian='be') -> List[int]:
     byteMask: int = (1 << 8) - 1
     out: List[int] = [0] * byteSize
 
@@ -20,7 +25,7 @@ def numToBytes(n: int, byteSize: int = 32) -> List[int]:
         out[byteSize] = curr
         n >>= 8
 
-    return out
+    return out if endian == 'be' else out[::-1]
 
 
 def joinBytes(msg: List[int], numBytes: int) -> List[int]:
